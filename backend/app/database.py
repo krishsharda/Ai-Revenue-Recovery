@@ -16,7 +16,7 @@ import os
 import threading
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -105,5 +105,10 @@ def init_db(force: bool = False) -> None:
         from . import models  # noqa: F401  (ensures all models are registered)
         from .models.base import Base
 
+        # Existing deployments already have the complete schema. Checking one
+        # stable table avoids create_all's round-trip per table on every cold start.
+        if not force and inspect(engine).has_table("customers"):
+            _initialised = True
+            return
         Base.metadata.create_all(bind=engine)
         _initialised = True

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..database import get_db
+from ..database import engine
 from ..ml import get_model
 from ..policies import policy_config
 
@@ -13,9 +12,10 @@ router = APIRouter(tags=["system"])
 
 
 @router.get("/health")
-def health(db: Session = Depends(get_db)) -> dict:
+def health() -> dict:
     try:
-        db.execute(text("SELECT 1"))
+        with engine.connect() as db:
+            db.execute(text("SELECT 1"))
         db_ok = True
     except Exception:
         db_ok = False
