@@ -34,6 +34,16 @@ if not settings.is_sqlite:
     # Fail fast instead of letting a request hang on an unreachable database.
     connect_args["connect_timeout"] = 10
 
+    # Supabase's transaction pooler (port 6543) and Neon's PgBouncer endpoint
+    # multiplex several clients onto one Postgres connection, so a server-side
+    # prepared statement created by one client can collide with another
+    # ("prepared statement _pg3_0 already exists"). psycopg names them
+    # deterministically, so this fails intermittently under concurrency rather
+    # than on the first request. Disabling the prepared-statement cache is the
+    # supported fix; direct connections keep it for the small speed win.
+    if ":6543" in settings.database_url or "pooler." in settings.database_url:
+        connect_args["prepare_threshold"] = None
+
 engine_kwargs: dict = {"connect_args": connect_args, "future": True}
 if IS_SERVERLESS and not settings.is_sqlite:
     engine_kwargs["poolclass"] = NullPool
