@@ -139,7 +139,8 @@ export default function SimulationPage() {
                 Demo / Simulation
               </span>
               <p className="text-[12.5px] text-muted-foreground">
-                {result.decision_engine} · {result.llm_calls} LLM calls. Projected results on a synthetic batch — <span className="font-medium text-foreground">not real
+                {result.decision_engine} · {result.llm_successes}/{result.llm_calls} LLM decisions succeeded
+                {result.llm_fallbacks ? ` (${result.llm_fallbacks} heuristic fallback${result.llm_fallbacks === 1 ? "" : "s"})` : ""}. Projected results on a synthetic batch — <span className="font-medium text-foreground">not real
                 historical business data</span>. Every number is computed live from this run.
               </p>
             </div>
@@ -182,7 +183,7 @@ export default function SimulationPage() {
               <Card className="flex items-center gap-3 border-success/30 bg-success/5 p-4">
                 <Activity className="h-5 w-5 text-success" />
                 <p className="text-sm">
-                  Cases persisted to the database — the dashboard, cases, and audit trail now include this run.
+                  {result.persisted_cases.toLocaleString()} of {result.num_cases.toLocaleString()} generated cases persisted to the database — the dashboard, cases, and audit trail include the persisted portion.
                 </p>
               </Card>
             )}

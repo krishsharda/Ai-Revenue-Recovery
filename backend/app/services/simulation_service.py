@@ -46,6 +46,8 @@ def run_simulation(num_cases: int, seed: int | None = None, db: Session | None =
     revenue_recovered = 0.0
     do_nothing_count = 0
     llm_calls = 0
+    llm_successes = 0
+    llm_fallbacks = 0
 
     perf: Dict[str, Dict[str, float]] = {
         a: {"attempts": 0, "successes": 0, "recovered": 0.0} for a in _INTERVENTION_ORDER
@@ -60,6 +62,10 @@ def run_simulation(num_cases: int, seed: int | None = None, db: Session | None =
         decision = decide(payload, use_llm=use_llm)
         if use_llm:
             llm_calls += 1
+            if decision.decided_by == "llm":
+                llm_successes += 1
+            else:
+                llm_fallbacks += 1
         action = decision.recommended_action
 
         # Guardrail validation (fresh case: no prior attempts/messages).
@@ -118,14 +124,18 @@ def run_simulation(num_cases: int, seed: int | None = None, db: Session | None =
     ]
 
     persisted = False
+    persisted_cases = 0
     if persist and db is not None:
-        persisted = _persist(db, inputs)
+        persisted_cases = _persist(db, inputs)
+        persisted = persisted_cases > 0
 
     return SimulationResult(
         num_cases=num_cases,
         revenue_at_risk=round(revenue_at_risk, 2),
         decision_engine="openai + heuristic fallback" if use_llm else "deterministic heuristic",
         llm_calls=llm_calls,
+        llm_successes=llm_successes,
+        llm_fallbacks=llm_fallbacks,
         ai_analyzed=num_cases,
         recovery_attempts=recovery_attempts,
         recovered_cases=recovered_cases,
@@ -135,11 +145,12 @@ def run_simulation(num_cases: int, seed: int | None = None, db: Session | None =
         intervention_performance=intervention,
         funnel=funnel,
         persisted=persisted,
+        persisted_cases=persisted_cases,
     )
 
 
-def _persist(db: Session, inputs: List[AIDecisionInput]) -> bool:
-    """Materialise simulated cases into the database (bounded for safety)."""
+def _persist(db: Session, inputs: List[AIDecisionInput]) -> int:
+    """Materialise at most 80 simulated cases for serverless safety."""
     from ..models.customer import Customer
     from ..models.transaction import Transaction
     from . import recovery_service
@@ -173,4 +184,4 @@ def _persist(db: Session, inputs: List[AIDecisionInput]) -> bool:
         recovery_service.process_failed_transaction(db, txn, execute=True, simulate=True, use_llm=False)
         created += 1
     db.commit()
-    return created > 0
+    return created

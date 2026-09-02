@@ -26,6 +26,8 @@ class SimulationResult(BaseModel):
     revenue_at_risk: float
     decision_engine: str
     llm_calls: int
+    llm_successes: int
+    llm_fallbacks: int
     ai_analyzed: int
     recovery_attempts: int
     recovered_cases: int
@@ -35,3 +37,4 @@ class SimulationResult(BaseModel):
     intervention_performance: List[InterventionPerformance]
     funnel: List[FunnelStage]
     persisted: bool
+    persisted_cases: int

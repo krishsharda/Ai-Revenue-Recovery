@@ -273,6 +273,8 @@ export interface SimulationResult {
   revenue_at_risk: number;
   decision_engine: string;
   llm_calls: number;
+  llm_successes: number;
+  llm_fallbacks: number;
   ai_analyzed: number;
   recovery_attempts: number;
   recovered_cases: number;
@@ -282,6 +284,7 @@ export interface SimulationResult {
   intervention_performance: InterventionPerformance[];
   funnel: FunnelStage[];
   persisted: boolean;
+  persisted_cases: number;
 }
 
 export interface AuditLogOut {
