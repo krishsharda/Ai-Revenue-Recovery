@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "name": "ai-revenue-recovery",
+  "regions": ["icn1"],
   "services": {
     "web": {
       "root": "frontend/",
