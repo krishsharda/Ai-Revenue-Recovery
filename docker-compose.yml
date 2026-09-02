@@ -1,0 +1,29 @@
+# Optional local PostgreSQL for AI Revenue Recovery.
+# The app runs on SQLite by default and does NOT require this. Use it to develop
+# against the same engine the deployment uses:
+#   1) docker compose up -d
+#   2) set DATABASE_URL in .env to:
+#      postgresql://revenue:revenue@localhost:5432/revenue_recovery
+# The psycopg driver is already in backend/requirements.txt, and the URL is
+# normalised to postgresql+psycopg:// automatically.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: revenue_recovery_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: revenue
+      POSTGRES_PASSWORD: revenue
+      POSTGRES_DB: revenue_recovery
+    ports:
+      - "5432:5432"
+    volumes:
+      - revenue_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revenue -d revenue_recovery"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  revenue_pgdata:

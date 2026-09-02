@@ -1,0 +1,40 @@
+# Secrets
+.env
+.env.local
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local databases
+# NOTE: do not add a bare `models/` rule here — it would also match
+# backend/app/models/, which is application source code.
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+
+# Node / Next
+node_modules/
+.next/
+out/
+next-env.d.ts.timestamp
+npm-debug.log*
+yarn-error.log*
+
+# Vercel
+.vercel/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

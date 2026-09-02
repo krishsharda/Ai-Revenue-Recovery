@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   NOCTURNE LIGHT — clean, minimal, airy
+   Off-white canvas · white cards · soft borders + gentle elevation · one accent
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+  --radius: 0.75rem;
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Surfaces */
+  --background: 210 30% 98%;   /* app canvas — faint cool gray */
+  --surface: 0 0% 100%;        /* sidebar / bars */
+  --card: 0 0% 100%;           /* cards — pure white */
+  --elevated: 0 0% 100%;
+
+  /* Ink */
+  --foreground: 222 47% 11%;   /* slate-900 */
+  --muted: 214 32% 95%;        /* light gray fill / tracks */
+  --muted-foreground: 215 16% 47%; /* slate-500 */
+
+  /* Structure */
+  --border: 214 24% 90%;       /* soft hairline */
+  --input: 214 24% 88%;
+  --ring: 217 91% 60%;
+
+  /* Primary = ink (clean dark buttons) */
+  --primary: 222 47% 11%;
+  --primary-foreground: 0 0% 100%;
+
+  /* One accent */
+  --accent: 217 91% 58%;
+  --accent-foreground: 0 0% 100%;
+
+  /* Semantics (deepened for legibility on white) */
+  --success: 152 58% 39%;
+  --warning: 30 90% 44%;
+  --danger: 0 72% 51%;
+  --info: 217 89% 54%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02" 1, "cv03" 1, "cv04" 1, "ss01" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: hsl(var(--accent) / 0.16);
+  color: hsl(var(--foreground));
+}
+
+/* Scrollbar — light */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(214 18% 82%);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: hsl(214 16% 72%); background-clip: content-box; }
+
+/* Barely-there ambient wash (keeps "clean" but not flat) */
+.app-aurora { position: relative; }
+.app-aurora::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(50rem 40rem at 90% -10%, hsl(217 91% 60% / 0.05), transparent 60%),
+    radial-gradient(46rem 36rem at 0% 0%, hsl(152 58% 45% / 0.035), transparent 58%);
+}
+
+/* Grain disabled in light mode */
+.grain-overlay { display: none; }
+
+@layer components {
+  .eyebrow {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+  }
+  .display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: var(--font-display); }
+  .font-mono-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(222 47% 14%) 0%, hsl(217 91% 52%) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-accent {
+    background: linear-gradient(135deg, hsl(217 91% 55%), hsl(250 84% 62%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Soft elevation — replaces the dark inset "sheen" */
+  .sheen {
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.03);
+  }
+  .glass {
+    background: hsl(var(--surface) / 0.8);
+    backdrop-filter: blur(12px) saturate(1.05);
+  }
+}
+
+.animation-delay-200 { animation-delay: 0.2s; }
+.animation-delay-400 { animation-delay: 0.4s; }
+.animation-delay-600 { animation-delay: 0.6s; }

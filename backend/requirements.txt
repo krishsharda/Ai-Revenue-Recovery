@@ -1,0 +1,27 @@
+# Runtime dependencies for the API service.
+#
+# Deliberately excludes scikit-learn / numpy / scipy / joblib. The recovery
+# model is served from plain parameters in app/ml/model_params.json, so the
+# deployed bundle stays small and cold starts stay fast. Training and test
+# dependencies live in requirements-dev.txt.
+
+# Core web
+fastapi>=0.141.0
+uvicorn[standard]>=0.52.0   # local development server; Vercel supplies its own
+python-multipart>=0.0.20
+
+# Data / validation
+pydantic>=2.11
+pydantic-settings>=2.10
+email-validator>=2.2      # backs pydantic EmailStr
+python-dotenv>=1.1
+
+# Database — SQLite locally, Postgres in deployment
+SQLAlchemy>=2.0.40
+psycopg[binary]>=3.2
+
+# Integrations
+razorpay>=2.0.0
+httpx>=0.28
+anthropic>=1.0            # LLM decision engine (optional at runtime)
+openai>=1.0               # alternative LLM provider (optional at runtime)

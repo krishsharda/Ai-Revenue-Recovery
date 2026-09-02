@@ -1,0 +1,11 @@
+# Development-only dependencies. NOT installed in the deployed function.
+#
+# scikit-learn and numpy are needed solely to re-train the recovery model
+# (`python -m scripts.train_model`), which rewrites app/ml/model_params.json.
+# Inference at runtime is pure Python and needs none of this.
+
+-r requirements.txt
+
+scikit-learn>=1.6
+numpy>=2.1
+pytest>=8.3
