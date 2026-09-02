@@ -33,7 +33,7 @@ _INTERVENTION_ORDER = [
 
 
 def run_simulation(num_cases: int, seed: int | None = None, db: Session | None = None,
-                   persist: bool = False) -> SimulationResult:
+                   persist: bool = False, use_llm: bool = False) -> SimulationResult:
     seed = seed if seed is not None else random.randint(1, 10_000_000)
     rng = random.Random(seed)
     model = get_model()
@@ -45,6 +45,7 @@ def run_simulation(num_cases: int, seed: int | None = None, db: Session | None =
     recovered_cases = 0
     revenue_recovered = 0.0
     do_nothing_count = 0
+    llm_calls = 0
 
     perf: Dict[str, Dict[str, float]] = {
         a: {"attempts": 0, "successes": 0, "recovered": 0.0} for a in _INTERVENTION_ORDER
@@ -56,7 +57,9 @@ def run_simulation(num_cases: int, seed: int | None = None, db: Session | None =
         revenue_at_risk += payload.transaction_amount
         recommended_amt += payload.transaction_amount
 
-        decision = decide(payload, use_llm=False)  # bulk sim -> heuristic (fast, no LLM cost)
+        decision = decide(payload, use_llm=use_llm)
+        if use_llm:
+            llm_calls += 1
         action = decision.recommended_action
 
         # Guardrail validation (fresh case: no prior attempts/messages).
@@ -121,6 +124,8 @@ def run_simulation(num_cases: int, seed: int | None = None, db: Session | None =
     return SimulationResult(
         num_cases=num_cases,
         revenue_at_risk=round(revenue_at_risk, 2),
+        decision_engine="openai + heuristic fallback" if use_llm else "deterministic heuristic",
+        llm_calls=llm_calls,
         ai_analyzed=num_cases,
         recovery_attempts=recovery_attempts,
         recovered_cases=recovered_cases,

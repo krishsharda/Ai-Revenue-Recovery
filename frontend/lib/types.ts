@@ -271,6 +271,8 @@ export interface ExecuteResult {
 export interface SimulationResult {
   num_cases: number;
   revenue_at_risk: number;
+  decision_engine: string;
+  llm_calls: number;
   ai_analyzed: number;
   recovery_attempts: number;
   recovered_cases: number;

@@ -136,7 +136,7 @@ export const api = {
     return request<PaginatedAudit>(`/audit-logs${q ? `?${q}` : ""}`);
   },
 
-  runSimulation: (body: { num_cases: number; seed?: number; persist?: boolean }) =>
+  runSimulation: (body: { num_cases: number; seed?: number; persist?: boolean; use_llm?: boolean }) =>
     request<SimulationResult>("/simulation/run", { method: "POST", body: JSON.stringify(body) }),
 
   settings: () => request<AppSettings>("/settings"),

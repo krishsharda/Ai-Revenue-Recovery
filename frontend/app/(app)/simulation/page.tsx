@@ -17,6 +17,7 @@ export default function SimulationPage() {
   const router = useRouter();
   const [numCases, setNumCases] = useState(1000);
   const [persist, setPersist] = useState(false);
+  const [useLlm, setUseLlm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,11 @@ export default function SimulationPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.runSimulation({ num_cases: numCases, persist });
+      const res = await api.runSimulation({
+        num_cases: useLlm ? Math.min(numCases, 10) : numCases,
+        persist: useLlm ? false : persist,
+        use_llm: useLlm,
+      });
       setResult(res);
       if (persist) router.refresh();
     } catch (e) {
@@ -76,11 +81,27 @@ export default function SimulationPage() {
                 <input
                   type="checkbox"
                   checked={persist}
+                  disabled={useLlm}
                   onChange={(e) => setPersist(e.target.checked)}
                   className="h-4 w-4 accent-[hsl(var(--primary))]"
                 />
                 <Database className="h-4 w-4 text-muted-foreground" />
                 Persist generated cases to the database
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={useLlm}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setUseLlm(enabled);
+                    if (enabled) setPersist(false);
+                    if (enabled && numCases > 10) setNumCases(10);
+                  }}
+                  className="h-4 w-4 accent-[hsl(var(--primary))]"
+                />
+                <Sparkles className="h-4 w-4 text-accent" />
+                Use OpenAI for a sample (maximum 10 cases)
               </label>
             </div>
             <button
@@ -118,7 +139,7 @@ export default function SimulationPage() {
                 Demo / Simulation
               </span>
               <p className="text-[12.5px] text-muted-foreground">
-                Projected results on a synthetic batch — <span className="font-medium text-foreground">not real
+                {result.decision_engine} · {result.llm_calls} LLM calls. Projected results on a synthetic batch — <span className="font-medium text-foreground">not real
                 historical business data</span>. Every number is computed live from this run.
               </p>
             </div>
@@ -126,7 +147,7 @@ export default function SimulationPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <Metric label="Cases" value={result.num_cases.toLocaleString()} />
               <Metric label="Simulated Revenue at Risk" value={formatINRShort(result.revenue_at_risk)} accent="danger" />
-              <Metric label="AI Analyzed" value={result.ai_analyzed.toLocaleString()} accent="primary" />
+              <Metric label="Decisions Generated" value={result.ai_analyzed.toLocaleString()} accent="primary" />
               <Metric label="Recovery Attempts" value={result.recovery_attempts.toLocaleString()} accent="info" />
               <Metric label="Simulated Revenue Recovered" value={formatINRShort(result.revenue_recovered)} accent="success" />
               <Metric label="Simulated Recovery Rate" value={`${result.recovery_rate.toFixed(1)}%`} accent="success" />

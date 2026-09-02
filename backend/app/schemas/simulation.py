@@ -10,6 +10,10 @@ from .dashboard import FunnelStage, InterventionPerformance
 class SimulationRequest(BaseModel):
     num_cases: int = Field(default=200, ge=1, le=2000)
     seed: Optional[int] = None
+    use_llm: bool = Field(
+        default=False,
+        description="Use the configured LLM for a small sample; limited to 10 cases.",
+    )
     persist: bool = Field(
         default=False,
         description="If true, generated cases are written to the database; "
@@ -20,6 +24,8 @@ class SimulationRequest(BaseModel):
 class SimulationResult(BaseModel):
     num_cases: int
     revenue_at_risk: float
+    decision_engine: str
+    llm_calls: int
     ai_analyzed: int
     recovery_attempts: int
     recovered_cases: int
