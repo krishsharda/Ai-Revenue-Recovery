@@ -14,22 +14,23 @@ router = APIRouter(tags=["settings"])
 
 @router.get("/settings")
 def get_settings() -> dict:
-    # The browser holds no admin token, so it cannot satisfy `require_admin`.
-    # Rather than let the UI offer a button that can only 401, report up front
-    # whether an unauthenticated caller is allowed to send — true exactly when
+    # Whether an *unauthenticated* caller may send — true exactly when
     # ADMIN_TOKEN is unset and this process is not publicly reachable, i.e.
-    # local development.
+    # local development. When false the UI still offers the send if an admin
+    # token has been entered in Settings; this only drives the explanation
+    # shown when there is no token, so the control is never silently dead.
     test_allowed = not settings.admin_token and not settings.is_public_deployment
     if test_allowed:
         test_blocked_reason = None
     elif settings.admin_token:
         test_blocked_reason = (
-            "Test email requires the server's ADMIN_TOKEN as an X-Admin-Token header. "
-            "Send it with curl, or run the app locally where it is not required."
+            "Sending a test email requires the server's ADMIN_TOKEN. "
+            "Paste it under Admin Access below to enable this."
         )
     else:
         test_blocked_reason = (
-            "Test email is disabled on this deployment because ADMIN_TOKEN is not set."
+            "Test email is disabled on this deployment because ADMIN_TOKEN is not set "
+            "on the server, so no token can authorise it."
         )
 
     return {

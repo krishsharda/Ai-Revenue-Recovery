@@ -45,8 +45,8 @@ export default function LandingPage() {
           Self-hosted from /public so it loads reliably on every refresh. */}
       <MetroHero
         videoSrc="/hero.mp4"
-        title="RECOVER FAILED REVENUE"
-        tagline="Diagnose why a payment failed, predict whether it can be recovered, and act — inside deterministic guardrails."
+        title="MAKE EVERY FAILED PAYMENT COUNT"
+        tagline="Spot the signal, choose the right next move, and turn lost revenue into a second chance."
         scrollHint="SCROLL"
         signature={false}
       />
