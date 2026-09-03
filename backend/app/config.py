@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # ---- Admin authentication ----------------------------------------------
-    # Shared secret for endpoints that destroy data or spend money (reseed,
-    # reset, test email). Required on any publicly reachable deployment; see
-    # `api/deps.py`. Unset locally so development stays frictionless.
+    # Shared secret for the one endpoint that spends real money and sender
+    # reputation (test email). Required on any publicly reachable deployment;
+    # see `api/deps.py`. Unset locally so development stays frictionless.
     admin_token: str = ""
 
     # ---- Database -----------------------------------------------------------

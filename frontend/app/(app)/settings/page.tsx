@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, KeyRound, Loader2, Mail, Send, XCircle, Zap, BrainCircuit } from "lucide-react";
+import { CheckCircle2, Loader2, Mail, Send, XCircle, Zap, BrainCircuit } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, getAdminToken, setAdminToken } from "@/lib/api";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { AppSettings, TestEmailResult } from "@/lib/types";
 
@@ -14,15 +14,17 @@ export default function SettingsPage() {
   const [to, setTo] = useState("");
   const [sending, setSending] = useState(false);
   const [testResult, setTestResult] = useState<TestEmailResult | null>(null);
-  const [token, setToken] = useState("");
 
   useEffect(() => {
     api.settings().then(setCfg).catch((e) => setErr((e as Error).message));
-    setToken(getAdminToken());
   }, []);
 
   const email = cfg?.email;
   const connected = !!email?.connected;
+  // The app carries no admin credential by design, so the server decides
+  // whether an unauthenticated test send is permitted. Offering the button
+  // regardless would only produce a 401 with nothing explaining it.
+  const testAllowed = email?.test_allowed !== false;
 
   async function sendTest() {
     setSending(true);
@@ -70,6 +72,11 @@ export default function SettingsPage() {
             {/* Send Test Email */}
             <div className="border-t border-border pt-4">
               <p className="eyebrow mb-2">Send Test Email</p>
+              {email?.test_blocked_reason && (
+                <p className="mb-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-[12.5px] text-muted-foreground">
+                  {email.test_blocked_reason}
+                </p>
+              )}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   type="email"
@@ -80,7 +87,7 @@ export default function SettingsPage() {
                 />
                 <button
                   onClick={sendTest}
-                  disabled={sending || !connected || !to}
+                  disabled={sending || !connected || !to || !testAllowed}
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-95 disabled:opacity-50"
                 >
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -141,39 +148,6 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        {/* Admin access */}
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4 text-muted-foreground" /> Admin Access
-            </CardTitle>
-            <StatusDot on={!!token} onLabel="Token Set" offLabel="Not Set" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Actions that destroy data or send real email require the{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">ADMIN_TOKEN</code>{" "}
-              configured on the server. It is held for this browser session only and is never
-              stored in the app bundle. Local development without a token set needs nothing here.
-            </p>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                autoComplete="off"
-                placeholder="Paste ADMIN_TOKEN"
-                className="h-10 flex-1 rounded-xl border border-border bg-card px-3 font-mono text-sm outline-none focus:border-primary/40"
-              />
-              <button
-                onClick={() => setAdminToken(token.trim())}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-border px-4 text-[13px] font-semibold transition-colors hover:bg-muted"
-              >
-                Save for session
-              </button>
-            </div>
-          </CardContent>
-        </Card>
 
         {err && <p className="text-sm text-danger">{err}</p>}
       </div>

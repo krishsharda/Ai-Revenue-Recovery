@@ -312,6 +312,9 @@ export interface AppSettings {
     environment: string | null;
     sender: string | null;
     reply_to: string | null;
+    /** False when the server would reject an unauthenticated test send. */
+    test_allowed: boolean;
+    test_blocked_reason: string | null;
   };
   razorpay: {
     connected: boolean;

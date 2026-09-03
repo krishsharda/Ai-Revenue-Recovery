@@ -161,7 +161,7 @@ the full annotated list. Highlights:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `ADMIN_TOKEN` | Guards reseed/reset/test-email via `X-Admin-Token`. **Required on a public deployment** — unset, those endpoints fail closed there | unset (open locally) |
+| `ADMIN_TOKEN` | Guards the test-email endpoint via `X-Admin-Token`. **Required on a public deployment** — unset, that endpoint fails closed there | unset (open locally) |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Real Razorpay **Test** API calls | simulated |
 | `RAZORPAY_WEBHOOK_SECRET` | Verify webhook signatures (HMAC-SHA256) | unverified locally |
 | `DATABASE_URL` | Any SQLAlchemy URL | `sqlite:///./ai_revenue_recovery.db` |
@@ -317,8 +317,6 @@ Every block/downgrade writes an **audit log**.
 | GET | `/api/audit-logs` | Audit trail |
 | POST | `/api/webhooks/razorpay` | Signed Razorpay webhook receiver |
 | POST | `/api/settings/email/test` | 🔒 Send a real test email |
-| POST | `/api/admin/seed` | 🔒 Regenerate demo data |
-| POST | `/api/admin/reset` | 🔒 Clear all data |
 
 Interactive docs: `http://localhost:8000/docs`.
 
@@ -329,7 +327,8 @@ Interactive docs: `http://localhost:8000/docs`.
 | Concern | How it's handled |
 |---------|------------------|
 | Secrets | Read from the environment only; never hardcoded, never logged, never sent to the browser. There are no `NEXT_PUBLIC_*` variables, so no key can reach the client bundle. |
-| Destructive & paid endpoints | Reseed, reset and test-email require `X-Admin-Token`. On a public deployment with `ADMIN_TOKEN` unset they **fail closed** rather than allowing an anonymous database wipe or an open mail relay. |
+| No destructive endpoints | There is no HTTP route that wipes or reseeds the database. Seeding happens on first request (`bootstrap.ensure_ready`) or from the `scripts/seed.py` CLI, so a deployed instance exposes no way to destroy its own data. |
+| Paid endpoints | `/api/settings/email/test` sends real mail from a verified sender domain, so it requires `X-Admin-Token`. On a public deployment with `ADMIN_TOKEN` unset it **fails closed** rather than becoming an anonymous mail relay. The browser is never given a token — the UI asks the server whether the send is permitted and disables the control with a reason when it is not. |
 | Webhook authenticity | HMAC-SHA256 over the raw body, compared with `hmac.compare_digest` (constant time). Invalid signatures are rejected and audited. With no secret configured, a public deployment refuses webhooks entirely — otherwise anyone could forge a capture and fake recovered revenue. |
 | SQL injection | All queries go through the SQLAlchemy ORM. The only raw SQL is a literal `SELECT 1` health probe and a parameterised advisory lock. |
 | XSS | React escapes by default; the app contains no `dangerouslySetInnerHTML`, `innerHTML` or `eval`. |
@@ -344,10 +343,10 @@ Generate an admin token with:
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Then call a guarded endpoint with it:
+Then call the guarded endpoint with it:
 
 ```bash
-curl -X POST https://<your-app>/api/admin/seed -H "X-Admin-Token: <token>"
+curl -X POST https://<your-app>/api/settings/email/test   -H "X-Admin-Token: <token>" -H "Content-Type: application/json"   -d '{"to":"you@example.com"}'
 ```
 
 ## Project structure
@@ -414,8 +413,9 @@ API rather than production's.
 3. Add the environment variables from `.env.example` to the project. Only
    `DATABASE_URL` is strictly required; without the optional keys the app runs
    with simulated Razorpay and the heuristic decision engine.
-4. Deploy. The first request creates the schema and seeds demo data. To reset it
-   later, `POST /api/admin/seed`.
+4. Deploy. The first request creates the schema and seeds demo data. To reseed
+   later, run `python -m scripts.seed` against the same `DATABASE_URL` — there is
+   deliberately no HTTP route that can wipe a deployed database.
 
 Run the whole thing locally exactly as Vercel does with `vercel dev`.
 

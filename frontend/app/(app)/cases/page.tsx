@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";
 import { Card } from "@/components/ui/card";
 import { FilterBar } from "@/components/cases/filter-bar";
@@ -13,11 +13,30 @@ import type { PaginatedCases } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+// Rendering all 100 cases at once produced a ~600 KB HTML document (markup plus
+// the RSC payload that mirrors it), which the browser had to parse and hydrate
+// on every visit. A page of 25 keeps the document about a quarter of that size
+// and the table interactive far sooner.
+const PAGE_SIZE = 25;
+
+function pageHref(searchParams: { [k: string]: string | undefined }, page: number): string {
+  const qs = new URLSearchParams();
+  for (const key of ["status", "risk_level", "loss_type", "search"]) {
+    const value = searchParams[key];
+    if (value) qs.set(key, value);
+  }
+  if (page > 1) qs.set("page", String(page));
+  const q = qs.toString();
+  return q ? `/cases?${q}` : "/cases";
+}
+
 export default async function CasesPage({
   searchParams,
 }: {
   searchParams: { [k: string]: string | undefined };
 }) {
+  const page = Math.max(1, Number.parseInt(searchParams.page ?? "1", 10) || 1);
+
   let data: PaginatedCases | null = null;
   let error: string | null = null;
   try {
@@ -26,11 +45,16 @@ export default async function CasesPage({
       risk_level: searchParams.risk_level,
       loss_type: searchParams.loss_type,
       search: searchParams.search,
-      limit: 100,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
     });
   } catch (e) {
     error = (e as Error).message;
   }
+
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  const rangeStart = data && data.items.length ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const rangeEnd = data ? (page - 1) * PAGE_SIZE + data.items.length : 0;
 
   return (
     <>
@@ -48,8 +72,14 @@ export default async function CasesPage({
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between border-b border-border px-5 py-3 text-xs text-muted-foreground">
               <span>
-                Showing <span className="font-semibold text-foreground">{data.items.length}</span> of{" "}
-                {data.total} cases
+                Showing{" "}
+                <span className="font-semibold text-foreground">
+                  {rangeStart}–{rangeEnd}
+                </span>{" "}
+                of {data.total} cases
+              </span>
+              <span>
+                Page <span className="font-semibold text-foreground">{page}</span> of {totalPages}
               </span>
             </div>
             <div className="overflow-x-auto">
@@ -108,9 +138,65 @@ export default async function CasesPage({
                 </tbody>
               </table>
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
+                <PageLink
+                  href={pageHref(searchParams, page - 1)}
+                  disabled={page <= 1}
+                  label="Previous"
+                  icon="prev"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {rangeStart}–{rangeEnd} of {data.total}
+                </span>
+                <PageLink
+                  href={pageHref(searchParams, page + 1)}
+                  disabled={page >= totalPages}
+                  label="Next"
+                  icon="next"
+                />
+              </div>
+            )}
           </Card>
         )}
       </div>
     </>
+  );
+}
+
+function PageLink({
+  href,
+  disabled,
+  label,
+  icon,
+}: {
+  href: string;
+  disabled: boolean;
+  label: string;
+  icon: "prev" | "next";
+}) {
+  const Icon = icon === "prev" ? ChevronLeft : ChevronRight;
+  const content = (
+    <>
+      {icon === "prev" && <Icon className="h-3.5 w-3.5" />}
+      {label}
+      {icon === "next" && <Icon className="h-3.5 w-3.5" />}
+    </>
+  );
+  const base =
+    "inline-flex items-center gap-1.5 rounded-[10px] border border-border px-3 py-1.5 text-[12.5px] font-medium";
+
+  if (disabled) {
+    return (
+      <span aria-disabled className={`${base} cursor-not-allowed text-muted-foreground/50`}>
+        {content}
+      </span>
+    );
+  }
+  return (
+    <Link href={href} className={`${base} transition-colors hover:bg-muted`}>
+      {content}
+    </Link>
   );
 }

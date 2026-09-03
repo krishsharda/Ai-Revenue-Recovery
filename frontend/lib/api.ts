@@ -37,30 +37,11 @@ function resolveServerBase(): string {
 
 export const API_BASE = typeof window === "undefined" ? resolveServerBase() : "/api";
 
-// Admin-guarded endpoints (reseed, reset, test email) expect an X-Admin-Token.
-// The operator pastes their own token in Settings; it is held for the browser
-// session only and is never bundled into the app, so no secret ships to the
-// client. Server-side rendering never calls these endpoints.
-const ADMIN_TOKEN_KEY = "arr.adminToken";
-
-export function getAdminToken(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    return window.sessionStorage.getItem(ADMIN_TOKEN_KEY) || "";
-  } catch {
-    return ""; // private mode / storage blocked
-  }
-}
-
-export function setAdminToken(token: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (token) window.sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
-    else window.sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-  } catch {
-    /* storage unavailable — the token simply won't persist across reloads */
-  }
-}
+// The app deliberately holds no admin credential. `/settings/email/test` is the
+// only guarded endpoint left, and the browser is not given a way to satisfy
+// that guard — on a deployment the test send is simply reported as unavailable
+// (see `email.test_allowed` from `/api/settings`) rather than offering a button
+// that can only fail. Locally the guard is inactive, so it just works.
 
 /** FastAPI reports errors as `{"detail": ...}`; surface that instead of raw JSON. */
 function extractDetail(body: string, status: number): string {
@@ -79,20 +60,15 @@ function extractDetail(body: string, status: number): string {
   return body.trim().slice(0, 200) || `Request failed with status ${status}.`;
 }
 
-async function request<T>(path: string, init?: RequestInit & { admin?: boolean }): Promise<T> {
-  const { admin, ...rest } = init || {};
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...((init?.headers as Record<string, string>) || {}),
   };
-  if (admin) {
-    const token = getAdminToken();
-    if (token) headers["X-Admin-Token"] = token;
-  }
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...rest, headers, cache: "no-store" });
+    res = await fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
   } catch {
     // Network-level failure (backend down, DNS, CORS) — fetch gives no status.
     throw new Error("Can't reach the API. Check that the backend is running.");
@@ -104,8 +80,30 @@ async function request<T>(path: string, init?: RequestInit & { admin?: boolean }
   return res.json() as Promise<T>;
 }
 
+// `/config` reports which integrations are wired up — process-level metadata
+// that doesn't change while the tab is open. The Topbar renders inside every
+// page rather than in the shared layout, so each navigation remounted it and
+// refetched: an extra round trip per route change, plus a visible flash of
+// empty status pills. Caching the in-flight promise collapses that to one
+// request per browser session, and a failure clears the cache so a later mount
+// can retry.
+let configPromise: Promise<AppConfig> | null = null;
+
+function configCached(): Promise<AppConfig> {
+  if (typeof window === "undefined") return request<AppConfig>("/config");
+  if (!configPromise) {
+    configPromise = request<AppConfig>("/config").catch((err) => {
+      configPromise = null;
+      throw err;
+    });
+  }
+  return configPromise;
+}
+
 export const api = {
   config: () => request<AppConfig>("/config"),
+  /** Session-cached `/config` — prefer this in components that mount per route. */
+  configCached,
   health: () => request<Record<string, unknown>>("/health"),
   dashboard: () => request<DashboardResponse>("/dashboard"),
   analytics: () => request<AnalyticsResponse>("/analytics"),
@@ -144,6 +142,5 @@ export const api = {
     request<TestEmailResult>("/settings/email/test", {
       method: "POST",
       body: JSON.stringify({ to }),
-      admin: true,
     }),
 };

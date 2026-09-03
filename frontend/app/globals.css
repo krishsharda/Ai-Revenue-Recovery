@@ -85,9 +85,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    radial-gradient(50rem 40rem at 90% -10%, hsl(217 91% 60% / 0.05), transparent 60%),
-    radial-gradient(46rem 36rem at 0% 0%, hsl(152 58% 45% / 0.035), transparent 58%);
+  background-image: radial-gradient(50rem 40rem at 90% -10%, hsl(217 91% 60% / 0.05), transparent 60%);
 }
 
 /* Grain disabled in light mode */
@@ -132,7 +130,17 @@ body {
   }
   .glass {
     background: hsl(var(--surface) / 0.8);
-    backdrop-filter: blur(12px) saturate(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

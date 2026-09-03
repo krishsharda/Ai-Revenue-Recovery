@@ -14,6 +14,24 @@ router = APIRouter(tags=["settings"])
 
 @router.get("/settings")
 def get_settings() -> dict:
+    # The browser holds no admin token, so it cannot satisfy `require_admin`.
+    # Rather than let the UI offer a button that can only 401, report up front
+    # whether an unauthenticated caller is allowed to send — true exactly when
+    # ADMIN_TOKEN is unset and this process is not publicly reachable, i.e.
+    # local development.
+    test_allowed = not settings.admin_token and not settings.is_public_deployment
+    if test_allowed:
+        test_blocked_reason = None
+    elif settings.admin_token:
+        test_blocked_reason = (
+            "Test email requires the server's ADMIN_TOKEN as an X-Admin-Token header. "
+            "Send it with curl, or run the app locally where it is not required."
+        )
+    else:
+        test_blocked_reason = (
+            "Test email is disabled on this deployment because ADMIN_TOKEN is not set."
+        )
+
     return {
         "email": {
             "connected": settings.resend_configured,
@@ -23,6 +41,8 @@ def get_settings() -> dict:
             # a secret; the API key behind it is never exposed.
             "sender": settings.email_from if settings.resend_configured else None,
             "reply_to": settings.email_reply_to or None,
+            "test_allowed": test_allowed,
+            "test_blocked_reason": test_blocked_reason,
         },
         "razorpay": {
             "connected": settings.razorpay_configured,

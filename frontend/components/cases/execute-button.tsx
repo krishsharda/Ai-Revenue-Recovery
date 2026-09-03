@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { CheckCircle2, Loader2, PlayCircle, RefreshCw, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ExecuteResult } from "@/lib/types";
@@ -11,13 +11,19 @@ export function ExecuteButton({ caseId, terminal }: { caseId: number; terminal: 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ExecuteResult["result"] | null>(null);
 
+  // Same reason as AnalyzeButton: `router.refresh()` doesn't return a promise,
+  // so without a transition the button reported success while the timeline and
+  // status badge on the page were still showing the pre-execution state.
+  const [refreshing, startTransition] = useTransition();
+  const busy = loading || refreshing;
+
   async function run(force = false) {
     setLoading(true);
     setResult(null);
     try {
       const res = await api.executeCase(caseId, { simulate: true, force });
       setResult(res.result);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       setResult({ status: "error", reason: (e as Error).message });
     } finally {
@@ -32,20 +38,35 @@ export function ExecuteButton({ caseId, terminal }: { caseId: number; terminal: 
     <div className="flex flex-col items-end gap-2">
       <button
         onClick={() => run(terminal)}
-        disabled={loading}
+        disabled={busy}
         className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 disabled:opacity-60"
       >
-        {loading ? (
+        {busy ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : terminal ? (
           <RefreshCw className="h-4 w-4" />
         ) : (
           <PlayCircle className="h-4 w-4" />
         )}
-        {loading ? "Executing…" : terminal ? "Re-run Recovery" : "Execute Recovery Action"}
+        {loading
+          ? "Executing…"
+          : refreshing
+          ? "Updating…"
+          : terminal
+          ? "Re-run Recovery"
+          : "Execute Recovery Action"}
       </button>
 
-      {result && (() => {
+      {result?.status === "error" && (
+        <div className="w-full max-w-[280px] rounded-xl border border-danger/30 bg-danger/[0.06] p-3">
+          <p className="eyebrow text-danger">Execution Failed</p>
+          <p className="mt-1 break-words text-[11.5px] leading-snug text-danger/90">
+            {result.reason || "The action could not be completed."}
+          </p>
+        </div>
+      )}
+
+      {result && result.status !== "error" && (() => {
         const real = result.execution_mode === "REAL_RAZORPAY_TEST";
         const heading = noAction
           ? "AI stood down — Do Nothing"

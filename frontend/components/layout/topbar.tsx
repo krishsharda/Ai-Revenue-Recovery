@@ -25,11 +25,11 @@ function Pill({ on, onLabel, offLabel, icon: Icon }: { on: boolean; onLabel: str
 export function Topbar({ title, subtitle }: { title: string; subtitle?: string }) {
   const [cfg, setCfg] = useState<AppConfig | null>(null);
   useEffect(() => {
-    api.config().then(setCfg).catch(() => setCfg(null));
+    api.configCached().then(setCfg).catch(() => setCfg(null));
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/70 px-5 backdrop-blur-xl sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-background px-5 sm:px-6">
       <div className="min-w-0">
         {subtitle && <p className="eyebrow truncate">{subtitle}</p>}
         <h1 className="mt-0.5 truncate font-display text-[19px] font-semibold tracking-tight">{title}</h1>
