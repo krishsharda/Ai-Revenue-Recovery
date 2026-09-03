@@ -440,3 +440,4 @@ Run the whole thing locally exactly as Vercel does with `vercel dev`.
 gracefully when unconfigured — email actions are blocked rather than faked, and
 Razorpay calls are labelled SIMULATED without credentials. The app never
 performs real-money transactions.*
+"# Ai-Revenue-Recovery" 
