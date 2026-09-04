@@ -1,5 +1,5 @@
 import { Check, TrendingUp } from "lucide-react";
-import { formatINR } from "@/lib/format";
+import { formatINR, formatProbability } from "@/lib/format";
 import { ACTION_COLORS } from "@/components/charts/palette";
 import { cn } from "@/lib/utils";
 import type { InterventionOption } from "@/lib/types";
@@ -63,7 +63,7 @@ export function StrategyComparison({
                     {formatINR(o.expected_value)}
                   </span>
                   <span className="ml-2 font-mono text-[11px] text-muted-foreground tabular-nums">
-                    {Math.round(o.success_probability * 100)}%
+                    {formatProbability(o.success_probability)}
                   </span>
                 </div>
               </div>

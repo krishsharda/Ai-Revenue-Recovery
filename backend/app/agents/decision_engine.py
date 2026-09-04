@@ -305,6 +305,15 @@ def _apply_llm(base: AIDecision, payload: AIDecisionInput,
     if action is None:
         return None, llm_client.SCHEMA_VALIDATION_ERROR  # unusable action
 
+    # The minimum recovery probability is a hard economic guardrail. The LLM
+    # can explain the case, but it cannot recommend an intervention below it.
+    below_intervention_threshold = (
+        payload.model_recovery_probability < settings.min_recovery_probability
+        and action != RecoveryActionType.DO_NOTHING
+    )
+    if below_intervention_threshold:
+        action = RecoveryActionType.DO_NOTHING
+
     risk = _coerce_risk(data.get("risk_level")) or base.risk_level
     channel = _CHANNEL_FOR_ACTION.get(action, base.channel)
     rc_code = _coerce_reason_code(data.get("root_cause_code")) or base.root_cause_code
@@ -315,6 +324,14 @@ def _apply_llm(base: AIDecision, payload: AIDecisionInput,
     confidence = _clamp_float(data.get("confidence"), base.confidence)
     llm_signals = data.get("signals") if isinstance(data.get("signals"), list) else []
     signals = _merge_signals(ml_signals, [str(s) for s in llm_signals], base.signals)
+    if below_intervention_threshold:
+        channel = base.channel
+        delay = base.delay_minutes
+        max_attempts = base.max_attempts
+        reason = base.reason
+        signals = _merge_signals(
+            signals, ["ML probability is below the minimum intervention threshold"]
+        )
 
     decision = AIDecision(
         risk_level=risk,

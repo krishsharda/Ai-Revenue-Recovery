@@ -15,6 +15,11 @@ export function formatPct(value: number, digits = 0): string {
   return `${(value * 100).toFixed(digits)}%`;
 }
 
+export function formatProbability(value: number): string {
+  if (value > 0 && value < 0.01) return `${(value * 100).toFixed(2)}%`;
+  return formatPct(value);
+}
+
 export function formatRelative(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
