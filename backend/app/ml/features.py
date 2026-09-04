@@ -23,7 +23,7 @@ CUSTOMER_VALUE_ORDINAL: Dict[str, float] = {"low": 0.0, "medium": 0.5, "high": 1
 FEATURE_NAMES: List[str] = (
     ["log_amount", "historical_recovery_rate", "success_rate",
      "prev_failed", "prev_success", "customer_value_ord",
-     "time_since_failure_hours", "prev_recovery_attempts"]
+     "prev_recovery_attempts"]
     + [f"method_{m}" for m in PAYMENT_METHODS]
     + [f"reason_{r}" for r in FAILURE_REASONS]
 )
@@ -55,7 +55,6 @@ def build_feature_dict(sample) -> Dict[str, float]:
         "prev_failed": float(prev_failed),
         "prev_success": float(prev_success),
         "customer_value_ord": CUSTOMER_VALUE_ORDINAL.get(cust_val, 0.5),
-        "time_since_failure_hours": minutes / 60.0,
         "prev_recovery_attempts": float(_get(sample, "previous_recovery_attempts", 0) or 0),
     }
     for m in PAYMENT_METHODS:
