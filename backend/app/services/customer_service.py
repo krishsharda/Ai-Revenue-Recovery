@@ -28,6 +28,7 @@ _RETRY_ACTIONS = {
     RecoveryActionType.RETRY_PAYMENT.value,
     RecoveryActionType.SCHEDULE_RETRY.value,
 }
+_MODEL_TIME_HORIZON_MINUTES = 12 * 60
 
 
 def minutes_since(dt: datetime) -> int:
@@ -36,7 +37,11 @@ def minutes_since(dt: datetime) -> int:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     delta = datetime.now(timezone.utc) - dt
-    return max(0, int(delta.total_seconds() // 60))
+    elapsed = max(0, int(delta.total_seconds() // 60))
+    # The model is trained on a short active-recovery horizon. Without this
+    # cap, old demo/live cases drift far outside its training distribution and
+    # the logistic model can produce meaningless near-zero probabilities.
+    return min(elapsed, _MODEL_TIME_HORIZON_MINUTES)
 
 
 def action_counts(db: Session, case_id: int) -> tuple[int, int]:
