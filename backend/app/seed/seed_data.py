@@ -15,6 +15,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from ..logging_config import get_logger
+from ..config import settings
 from ..models.audit_log import AuditLog
 from ..models.customer import Customer
 from ..models.enums import (
@@ -132,6 +133,7 @@ def seed(db: Session, *, clear: bool = True, run_pipeline: bool = True) -> dict:
     customers_created = 0
     txns_created = 0
     cases_created = 0
+    seed_use_llm = settings.llm_configured
 
     for spec in _specs():
         cust = Customer(
@@ -159,14 +161,13 @@ def seed(db: Session, *, clear: bool = True, run_pipeline: bool = True) -> dict:
             txns_created += 1
 
             if run_pipeline:
-                # Seed uses the fast heuristic engine (no per-case LLM calls);
-                # the LLM is showcased on-demand via the Analyze/Execute actions.
                 recovery_service.process_failed_transaction(
-                    db, txn, execute=tspec.execute, simulate=True, use_llm=False)
+                    db, txn, execute=tspec.execute, simulate=True, use_llm=seed_use_llm,
+                    require_llm=seed_use_llm)
                 cases_created += 1
 
     if run_pipeline:
-        pair = _seed_contrast_pair(db)
+        pair = _seed_contrast_pair(db, use_llm=seed_use_llm)
         customers_created += pair["customers"]
         txns_created += pair["transactions"]
         cases_created += pair["cases"]
@@ -178,7 +179,7 @@ def seed(db: Session, *, clear: bool = True, run_pipeline: bool = True) -> dict:
     return {"customers": customers_created, "transactions": txns_created, "cases": cases_created}
 
 
-def _seed_contrast_pair(db: Session) -> dict:
+def _seed_contrast_pair(db: Session, *, use_llm: bool = False) -> dict:
     """Two customers, identical ₹12,500 bank-decline failure, opposite AI decisions —
     the proof that context (not the failure) drives the decision."""
     from ..models.recovery_action import RecoveryAction
@@ -196,7 +197,9 @@ def _seed_contrast_pair(db: Session) -> dict:
     db.add(ta); db.flush()
     db.add(PaymentAttempt(transaction_id=ta.id, attempt_number=1, status="FAILED",
                           failure_reason=FailureReason.BANK_DECLINE.value))
-    recovery_service.process_failed_transaction(db, ta, execute=False, use_llm=False)
+    recovery_service.process_failed_transaction(
+        db, ta, execute=False, use_llm=use_llm, require_llm=use_llm
+    )
 
     # Customer B — repeated failures, low engagement, 2 prior recovery attempts -> DO_NOTHING.
     b = Customer(name="Rehan Ali", email="rehan.ali@example.test", phone=None,
@@ -221,7 +224,7 @@ def _seed_contrast_pair(db: Session) -> dict:
                               result="Prior recovery attempt (no conversion).",
                               executed_at=None))
     db.flush()
-    recovery_service.analyze_case(db, case_b, use_llm=False)
+    recovery_service.analyze_case(db, case_b, use_llm=use_llm, require_llm=use_llm)
     db.flush()
     return {"customers": 2, "transactions": 2, "cases": 2}
 

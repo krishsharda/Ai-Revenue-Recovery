@@ -27,6 +27,10 @@ from .root_cause import analyze as analyze_root_cause
 
 logger = get_logger(__name__)
 
+
+class LLMDecisionUnavailable(RuntimeError):
+    """Raised when a requested LLM decision cannot be produced."""
+
 _TRANSIENT = {
     FailureReason.BANK_DECLINE,
     FailureReason.PAYMENT_TIMEOUT,
@@ -62,7 +66,7 @@ _MESSAGING_ACTIONS = {
 
 
 def decide(payload: AIDecisionInput, ml_signals: Optional[List[str]] = None,
-           use_llm: bool = True) -> AIDecision:
+           use_llm: bool = True, require_llm: bool = False) -> AIDecision:
     ml_signals = ml_signals or []
     # Always compute a valid heuristic baseline first (the safety net).
     base = _heuristic(payload, ml_signals, decided_by="heuristic")
@@ -70,10 +74,10 @@ def decide(payload: AIDecisionInput, ml_signals: Optional[List[str]] = None,
         merged, reason = _apply_llm_with_retry(base, payload, ml_signals)
         if merged is not None:
             return merged
-        # Retried once and still failed → deterministic fallback, reason recorded.
-        base.decided_by = "heuristic_fallback"
-        base.fallback_reason = reason
-        logger.warning("LLM decision fell back to heuristic after retry [%s].", reason)
+        if require_llm or use_llm:
+            raise LLMDecisionUnavailable(reason or llm_client.API_ERROR)
+    elif require_llm:
+        raise LLMDecisionUnavailable("LLM_NOT_CONFIGURED")
     return base
 
 

@@ -76,7 +76,8 @@ def get_or_create_case(db: Session, txn: Transaction) -> Tuple[RecoveryCase, boo
 # --------------------------------------------------------------------------- #
 # DIAGNOSE + DECIDE
 # --------------------------------------------------------------------------- #
-def analyze_case(db: Session, case: RecoveryCase, *, use_llm: bool = True) -> RecoveryCase:
+def analyze_case(db: Session, case: RecoveryCase, *, use_llm: bool = True,
+                 require_llm: bool = False) -> RecoveryCase:
     txn = case.transaction
     customer = txn.customer
     case.status = CaseStatus.ANALYZING.value
@@ -86,7 +87,7 @@ def analyze_case(db: Session, case: RecoveryCase, *, use_llm: bool = True) -> Re
     explanation = model.explain(payload)
     ml_signals = human_readable_signals(payload, explanation)
 
-    decision = decide(payload, ml_signals, use_llm=use_llm)
+    decision = decide(payload, ml_signals, use_llm=use_llm, require_llm=require_llm)
     expected_value = round(txn.amount * decision.recovery_probability, 2)
 
     rationale = {
@@ -390,10 +391,11 @@ def mark_recovered_by_webhook(db: Session, txn: Transaction, payment_id: Optiona
 
 # --------------------------------------------------------------------------- #
 def process_failed_transaction(db: Session, txn: Transaction, *, execute: bool = False,
-                               simulate: bool = True, use_llm: bool = True) -> RecoveryCase:
+                               simulate: bool = True, use_llm: bool = True,
+                               require_llm: bool = False) -> RecoveryCase:
     """Full intake: detect -> diagnose -> decide (and optionally validate+execute)."""
     case, _created = get_or_create_case(db, txn)
-    analyze_case(db, case, use_llm=use_llm)
+    analyze_case(db, case, use_llm=use_llm, require_llm=require_llm)
     if execute:
         execute_case(db, case, simulate=simulate, use_llm=use_llm)
     return case

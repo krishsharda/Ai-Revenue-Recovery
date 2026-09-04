@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..agents.decision_engine import LLMDecisionUnavailable
 from ..database import get_db
 from ..schemas.recovery import PaginatedCases, RecoveryCaseDetail
 from ..services import case_service, recovery_service
@@ -48,7 +49,14 @@ def analyze_case(case_id: int, db: Session = Depends(get_db)) -> RecoveryCaseDet
     case = case_service.get_case(db, case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="Recovery case not found")
-    recovery_service.analyze_case(db, case)
+    try:
+        recovery_service.analyze_case(db, case, require_llm=True)
+    except LLMDecisionUnavailable as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail=f"LLM analysis failed ({exc}). Check the deployed LLM_API_KEY, model, quota, and API logs.",
+        ) from exc
     db.commit()
     return case_service.get_case_detail(db, case_id)
 
