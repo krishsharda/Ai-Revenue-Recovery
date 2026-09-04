@@ -48,7 +48,5 @@ def config() -> dict:
             "database_engine": "sqlite" if settings.is_sqlite else "postgresql",
         },
         "policy": policy_config(),
-        "decision_engine": (
-            f"{settings.resolved_llm_provider}+heuristic" if settings.llm_configured else "heuristic"
-        ),
+        "decision_engine": settings.resolved_llm_provider if settings.llm_configured else "unconfigured",
     }
